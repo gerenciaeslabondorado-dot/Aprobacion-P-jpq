@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Programación de Pagos — Inversiones JPQ SAS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --negro: #0f0f1a;
+  --negro2: #1a1a2e;
+  --dorado: #f5c518;
+  --dorado2: #e0b014;
+  --verde: #22c55e;
+  --verde2: #16a34a;
+  --azul: #3b82f6;
+  --rojo: #ef4444;
+  --naranja: #f97316;
+  --crema: #fef9ed;
+  --crema2: #fdf0d0;
+  --blanco: #ffffff;
+  --gris1: #f4f4f4;
+  --gris2: #e5e5e5;
+  --gris3: #999;
+  --texto: #1a1a2e;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--negro);
+  color: var(--blanco);
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--negro2);
+  border-bottom: 2px solid var(--dorado);
+  padding: 18px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.header-left h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  color: var(--dorado);
+  letter-spacing: 0.02em;
+}
+.header-left p {
+  font-size: 11px;
+  color: var(--gris3);
+  margin-top: 2px;
+  font-family: 'DM Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.tabs {
+  display: flex;
+  gap: 6px;
+}
+.tab {
+  padding: 7px 18px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.18s;
+  letter-spacing: 0.02em;
+}
+.tab.active {
+  background: var(--dorado);
+  color: var(--negro);
+  border-color: var(--dorado);
+}
+.tab:not(.active) {
+  background: transparent;
+  color: var(--gris3);
+  border-color: #333;
+}
+.tab:not(.active):hover {
+  border-color: var(--dorado);
+  color: var(--dorado);
+}
+
+/* ── MAIN ── */
+.main { padding: 24px 28px; max-width: 1200px; margin: 0 auto; }
+
+/* ── STATS ── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.stat {
+  background: var(--negro2);
+  border: 1px solid #2a2a3e;
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: border-color 0.2s;
+}
+.stat:hover { border-color: var(--dorado); }
+.stat-label {
+  font-size: 10px;
+  color: var(--gris3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: 'DM Mono', monospace;
+  margin-bottom: 6px;
+}
+.stat-val {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--blanco);
+  font-family: 'DM Mono', monospace;
+}
+.stat-val.gold { color: var(--dorado); }
+.stat-val.green { color: var(--verde); }
+.stat-val.red { color: var(--rojo); }
+.stat-val.orange { color: var(--naranja); }
+
+/* ── ALERTAS ── */
+.alert {
+  display: none;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.alert.show { display: flex; }
+.alert-dup { background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.4); color: #fdba74; }
+.alert-list { background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); color: #fde047; }
+.alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── UPLOAD ── */
+.upload-zone {
+  border: 2px dashed #2a2a3e;
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(245,197,24,0.02);
+  margin-bottom: 22px;
+}
+.upload-zone:hover {
+  border-color: var(--dorado);
+  background: rgba(245,197,24,0.05);
+}
+.upload-zone.drag { border-color: var(--dorado); background: rgba(245,197,24,0.08); }
+.upload-icon { font-size: 36px; margin-bottom: 10px; }
+.upload-zone h3 { font-size: 15px; color: var(--dorado); margin-bottom: 6px; }
+.upload-zone p { font-size: 12px; color: var(--gris3); }
+#file-input { display: none; }
+
+/* ── SEMANA INFO ── */
+.semana-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--negro2);
+  border: 1px solid #2a2a3e;
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.semana-bar.show { display: flex; }
+.semana-info { font-size: 12px; color: var(--gris3); font-family: 'DM Mono', monospace; }
+.semana-info span { color: var(--dorado); font-weight: 500; }
+.btn-nueva {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1.5px solid #333;
+  background: transparent;
+  color: var(--gris3);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-nueva:hover { border-color: var(--dorado); color: var(--dorado); }
+
+/* ── TABLE ── */
+.table-wrap {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #2a2a3e;
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 800px; }
+thead tr { background: var(--negro2); }
+th {
+  padding: 11px 12px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dorado);
+  font-family: 'DM Mono', monospace;
+  border-bottom: 1px solid #2a2a3e;
+  white-space: nowrap;
+}
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #1e1e30;
+  color: var(--blanco);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr.row-normal { background: rgba(255,255,255,0.015); }
+tr.row-normal:hover { background: rgba(245,197,24,0.04); }
+tr.row-dup-list { background: rgba(234,179,8,0.08); }
+tr.row-dup-hist { background: rgba(249,115,22,0.08); }
+tr.row-approved { background: rgba(34,197,94,0.06); }
+tr.row-rejected { background: rgba(239,68,68,0.05); opacity: 0.6; }
+
+.val { font-family: 'DM Mono', monospace; font-weight: 500; color: var(--azul); text-align: right; }
+.caus { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--gris3); }
+.nombre { font-weight: 500; }
+
+/* badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+.badge-pend { background: rgba(255,255,255,0.07); color: #aaa; }
+.badge-aprov { background: rgba(34,197,94,0.15); color: var(--verde); border: 1px solid rgba(34,197,94,0.3); }
+.badge-rech { background: rgba(239,68,68,0.12); color: var(--rojo); border: 1px solid rgba(239,68,68,0.3); }
+.badge-dup-list { background: rgba(234,179,8,0.15); color: #fde047; border: 1px solid rgba(234,179,8,0.35); }
+.badge-dup-hist { background: rgba(249,115,22,0.15); color: #fdba74; border: 1px solid rgba(249,115,22,0.35); }
+
+/* acciones */
+.actions { display: flex; gap: 5px; }
+.btn-ok {
+  padding: 4px 12px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1.5px solid rgba(34,197,94,0.4);
+  background: rgba(34,197,94,0.1);
+  color: var(--verde);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-ok:hover { background: rgba(34,197,94,0.2); }
+.btn-no {
+  padding: 4px 12px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1.5px solid rgba(239,68,68,0.3);
+  background: rgba(239,68,68,0.08);
+  color: var(--rojo);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-no:hover { background: rgba(239,68,68,0.18); }
+.btn-undo {
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  border: 1.5px solid #333;
+  background: transparent;
+  color: var(--gris3);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-undo:hover { border-color: #555; color: #ccc; }
+
+/* ── FOOTER TABLE ── */
+.foot-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--negro2);
+  border: 1px solid #2a2a3e;
+  border-radius: 8px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ft-label { font-size: 11px; color: var(--gris3); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.1em; }
+.ft-val { font-size: 20px; font-weight: 600; color: var(--dorado); font-family: 'DM Mono', monospace; }
+
+/* ── FOOTER ACTIONS ── */
+.footer-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 30px; }
+.btn-main {
+  padding: 9px 20px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1.5px solid;
+}
+.btn-primary { background: var(--dorado); color: var(--negro); border-color: var(--dorado); }
+.btn-primary:hover { background: var(--dorado2); }
+.btn-secondary { background: transparent; color: var(--gris3); border-color: #333; }
+.btn-secondary:hover { border-color: var(--dorado); color: var(--dorado); }
+
+/* ── HISTORIAL PANEL ── */
+.hist-panel {
+  background: var(--negro2);
+  border: 1px solid #2a2a3e;
+  border-radius: 10px;
+  padding: 18px;
+  margin-top: 24px;
+}
+.hist-panel h3 {
+  font-size: 13px;
+  color: var(--dorado);
+  font-family: 'DM Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 14px;
+}
+.hist-empty { font-size: 12px; color: var(--gris3); text-align: center; padding: 16px 0; }
+.hist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #1e1e30;
+  font-size: 12px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hist-item:last-child { border-bottom: none; }
+.hist-nombre { font-weight: 500; flex: 1; min-width: 150px; }
+.hist-semana { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--gris3); }
+.hist-empresa { font-size: 10px; color: var(--gris3); }
+.hist-val { font-family: 'DM Mono', monospace; font-weight: 500; color: var(--azul); }
+
+/* ── LEYENDA ── */
+.leyenda {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--gris3);
+  margin-bottom: 16px;
+}
+.leyenda-item { display: flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── EMPTY ── */
+.empty { text-align: center; padding: 40px 20px; color: var(--gris3); font-size: 13px; }
+
+
+/* ── LOCK ── */
+.lock-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10,10,20,0.92);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+}
+.lock-overlay.show { display: flex; }
+.lock-box {
+  background: var(--negro2);
+  border: 2px solid var(--dorado);
+  border-radius: 14px;
+  padding: 36px 32px;
+  text-align: center;
+  width: 320px;
+  max-width: 90vw;
+}
+.lock-box h2 {
+  font-family: 'Playfair Display', serif;
+  color: var(--dorado);
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+.lock-box p {
+  font-size: 12px;
+  color: var(--gris3);
+  margin-bottom: 20px;
+}
+.lock-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 7px;
+  border: 1.5px solid #333;
+  background: #111;
+  color: #fff;
+  font-size: 14px;
+  font-family: 'DM Mono', monospace;
+  margin-bottom: 12px;
+  outline: none;
+  text-align: center;
+  letter-spacing: 0.1em;
+}
+.lock-input:focus { border-color: var(--dorado); }
+.lock-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 7px;
+  border: none;
+  background: var(--dorado);
+  color: var(--negro);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.lock-btn:hover { background: var(--dorado2); }
+.lock-error {
+  font-size: 12px;
+  color: var(--rojo);
+  margin-top: 8px;
+  display: none;
+}
+.lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: rgba(34,197,94,0.12);
+  border: 1px solid rgba(34,197,94,0.3);
+  color: var(--verde);
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 10px;
+  cursor: pointer;
+}
+.lock-badge:hover { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: var(--rojo); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--negro2); }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Inversiones JPQ SAS</h1>
+    <p>Programación &amp; Autorización de Pagos</p>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchEmpresa('eslabon')">💛 Eslabón Dorado</div>
+    <div class="tab" onclick="switchEmpresa('llanero')">🔩 Llanero Barriles</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Total a pagar</div>
+      <div class="stat-val gold" id="stat-total">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Aprobados</div>
+      <div class="stat-val green" id="stat-aprov">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Pendientes</div>
+      <div class="stat-val" id="stat-pend">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">⚠ Alertas</div>
+      <div class="stat-val red" id="stat-alert">0</div>
+    </div>
+  </div>
+
+  <!-- Alertas -->
+  <div class="alert alert-dup" id="alert-hist">
+    <span class="alert-icon">🟠</span>
+    <span id="alert-hist-msg"></span>
+  </div>
+  <div class="alert alert-list" id="alert-list">
+    <span class="alert-icon">🟡</span>
+    <span id="alert-list-msg"></span>
+  </div>
+
+  <!-- Semana bar -->
+  <div class="semana-bar" id="semana-bar">
+    <div class="semana-info">Empresa: <span id="sb-empresa">—</span> &nbsp;·&nbsp; Semana: <span id="sb-semana">—</span> &nbsp;·&nbsp; Cargado: <span id="sb-fecha">—</span></div>
+    <button class="btn-nueva" onclick="nuevaSemana()">↺ Nueva semana</button>
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-zone" id="upload-zone"
+    onclick="document.getElementById('file-input').click()"
+    ondragover="event.preventDefault();this.classList.add('drag')"
+    ondragleave="this.classList.remove('drag')"
+    ondrop="handleDrop(event)">
+    <div class="upload-icon">📂</div>
+    <h3>Subir Excel de pagos</h3>
+    <p>Haz clic o arrastra el archivo .xlsx aquí</p>
+    <p style="margin-top:6px;font-size:11px;color:#555">La aux contable sube el archivo cada lunes</p>
+  </div>
+  <input type="file" id="file-input" accept=".xlsx,.xls,.csv" onchange="handleFile(event)">
+
+  <div id="demo-wrap" style="text-align:center;margin-bottom:18px">
+    <button id="btn-demo" onclick="cargarDemo()" style="padding:10px 28px;border-radius:8px;font-size:14px;font-weight:700;border:2px solid #f5c518;background:rgba(245,197,24,0.12);color:#f5c518;cursor:pointer;letter-spacing:0.03em">▶ Ver ejemplo con datos reales</button>
+    <p style="font-size:11px;color:#666;margin-top:6px">Carga datos de ejemplo con alertas de duplicados</p>
+  </div>
+
+  <!-- Leyenda -->
+  <div class="leyenda" id="leyenda" style="display:none">
+    <div class="leyenda-item"><div class="dot" style="background:#fdba74"></div> 🟠 Ya aprobado en semana anterior — verificar antes de aprobar</div>
+    <div class="leyenda-item"><div class="dot" style="background:#4ade80"></div> 🟢 Aprobado esta semana</div>
+    <div class="leyenda-item"><div class="dot" style="background:#f87171"></div> 🔴 Rechazado</div>
+  </div>
+
+  <!-- Tabla -->
+  <div id="table-container" style="display:none">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Causación</th>
+            <th>Nombre / Proveedor</th>
+            <th>Banco</th>
+            <th>Vencimiento</th>
+            <th style="text-align:right">Valor</th>
+            <th>Estado</th>
+            <th>✅ Aprobado por</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-body"></tbody>
+      </table>
+    </div>
+
+    <div class="foot-total">
+      <div>
+        <div class="ft-label">Total a pagar</div>
+        <div class="ft-val" id="foot-total">$0</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-main btn-primary" onclick="aprobarTodos()">✅ Aprobar todos pendientes</button>
+        <button class="btn-main btn-secondary" onclick="exportar()">↓ Exportar resumen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historial -->
+  <div class="hist-panel" id="hist-panel">
+    <h3>📋 Historial de pagos aprobados</h3>
+    <div id="hist-contenido"><div class="hist-empty">Sin registros aún. Los pagos aprobados aparecerán aquí automáticamente.</div></div>
+  </div>
+
+</div>
+
+<script>
+// ── Estado ────────────────────────────────────────────────────────────────────
+let empresa = 'eslabon';
+let autenticada = false;
+const CLAVE = 'Jpq2026*Bonitavida';
+let datos = { eslabon: [], llanero: [] };
+let estados = { eslabon: {}, llanero: {} };
+let semanas = { eslabon: '', llanero: '' };
+
+
+
+// Historial en memoria
+let _historial = [];
+function getHist() { return _historial; }
+function saveHist(h) { _historial = h.slice(-300); }
+
+// ── Formato ───────────────────────────────────────────────────────────────────
+function fmt(n) {
+  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(n);
+}
+function parseVal(v) {
+  if (typeof v === 'number') return v;
+  return parseFloat(String(v).replace(/[^0-9.\-]/g, '')) || 0;
+}
+function dupKey(nombre, valor) {
+  return String(nombre || '').toLowerCase().trim() + '||' + Math.round(parseVal(valor));
+}
+
+// ── Detección duplicados — SOLO contra historial de pagos ya aprobados ────────
+function analizarDups(rows) {
+  const hist = getHist();
+  const dupHist = new Set();
+
+  rows.forEach((r, i) => {
+    const k = dupKey(r.nombre, r.valor);
+    const encontrado = hist.find(h => dupKey(h.nombre, h.valor) === k);
+    if (encontrado) dupHist.add(i);
+  });
+
+  // dupLista vacío — ya no se alerta por repetidos dentro de la misma semana
+  return { dupLista: new Set(), dupHist };
+}
+
+// ── Parse Excel ───────────────────────────────────────────────────────────────
+function parseRows(raw) {
+  let header = -1;
+  for (let i = 0; i < Math.min(raw.length, 8); i++) {
+    if (raw[i] && raw[i].some(c => /nombre|causac/i.test(String(c || '')))) { header = i; break; }
+  }
+  if (header < 0) header = 0;
+  const hdrs = raw[header].map(h => String(h || '').toLowerCase().trim());
+  const rows = [];
+  for (let i = header + 1; i < raw.length; i++) {
+    const r = raw[i]; if (!r || r.every(c => !c)) continue;
+    const get = (...keys) => { for (const k of keys) { const idx = hdrs.findIndex(h => h.includes(k)); if (idx >= 0 && r[idx] !== undefined) return r[idx]; } return ''; };
+    const nombre = String(get('nombre') || r[1] || '').trim();
+    if (!nombre || /total/i.test(nombre)) continue;
+    const valor = parseVal(get('valor', 'monto') || r[hdrs.length - 1]);
+    rows.push({
+      causacion: String(get('causac') || r[0] || ''),
+      nombre,
+      nit: String(get('nit') || r[2] || ''),
+      cuenta: String(get('cuenta') || r[3] || ''),
+      banco: String(get('banco') || r[4] || ''),
+      tipo: String(get('tipo') || r[5] || ''),
+      vencimiento: String(get('venc') || r[6] || ''),
+      valor,
+      notas: String(get('nota') || ''),
+    });
+  }
+  return rows;
+}
+
+// ── Manejar archivo ───────────────────────────────────────────────────────────
+function handleFile(e) { leerArchivo(e.target.files[0]); }
+function handleDrop(e) { e.preventDefault(); document.getElementById('upload-zone').classList.remove('drag'); leerArchivo(e.dataTransfer.files[0]); }
+function leerArchivo(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      const rows = parseRows(raw);
+      if (!rows.length) { alert('No se encontraron pagos en el archivo. Verifica que el formato sea correcto.'); return; }
+      datos[empresa] = rows;
+      estados[empresa] = {};
+      semanas[empresa] = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+      render();
+    } catch(err) { alert('No se pudo leer el archivo. Verifica que sea un Excel válido (.xlsx).'); }
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const rows = datos[empresa];
+  const est = estados[empresa];
+  if (!rows || !rows.length) {
+    document.getElementById('upload-zone').style.display = 'block';
+    document.getElementById('table-container').style.display = 'none';
+    document.getElementById('semana-bar').classList.remove('show');
+    document.getElementById('leyenda').style.display = 'none';
+    updateStats([], {});
+    renderHist();
+    return;
+  }
+
+  document.getElementById('upload-zone').style.display = 'none';
+  document.getElementById('table-container').style.display = 'block';
+  document.getElementById('semana-bar').classList.add('show');
+  document.getElementById('leyenda').style.display = 'flex';
+
+  const empresaNombre = empresa === 'eslabon' ? 'Eslabón Dorado' : 'Llanero Barriles';
+  document.getElementById('sb-empresa').textContent = empresaNombre;
+  document.getElementById('sb-semana').textContent = semanas[empresa] || '—';
+  document.getElementById('sb-fecha').textContent = semanas[empresa] || '—';
+
+  const { dupLista, dupHist } = analizarDups(rows);
+
+  // Alertas
+  const aHist = document.getElementById('alert-hist');
+  const aList = document.getElementById('alert-list');
+  if (dupHist.size > 0) {
+    aHist.classList.add('show');
+    document.getElementById('alert-hist-msg').textContent =
+      `⚠ ${dupHist.size} pago(s) marcados en naranja ya fueron aprobados por ti en semanas anteriores. No aprobar sin verificar primero.`;
+  } else aHist.classList.remove('show');
+  aList.classList.remove('show');
+
+  // Tabla
+  const tbody = document.getElementById('tabla-body');
+  tbody.innerHTML = '';
+  rows.forEach((r, i) => {
+    const estado = est[i] || 'pendiente';
+    const isDupLista = dupLista.has(i);
+    const isDupHist = dupHist.has(i);
+    let rowClass = 'row-normal';
+    if (estado === 'aprobado') rowClass = 'row-approved';
+    else if (estado === 'rechazado') rowClass = 'row-rejected';
+    else if (isDupHist) rowClass = 'row-dup-hist';
+    else if (isDupLista) rowClass = 'row-dup-list';
+
+    let badgeHtml = '';
+    if (estado === 'aprobado') badgeHtml = '<span class="badge badge-aprov">✓ Aprobado</span>';
+    else if (estado === 'rechazado') badgeHtml = '<span class="badge badge-rech">✗ Rechazado</span>';
+    else if (isDupHist) badgeHtml = '<span class="badge badge-dup-hist">🟠 Hist.</span>';
+    else if (isDupLista) badgeHtml = '<span class="badge badge-dup-list">🟡 Lista</span>';
+    else badgeHtml = '<span class="badge badge-pend">Pendiente</span>';
+
+    let aprobadoPor = est['aprobador_' + i] || '';
+    let aprobHtml = '';
+    if (estado === 'aprobado') {
+      aprobHtml = `<span style="font-family:'DM Mono',monospace;font-size:11px;color:#4ade80;font-weight:600">${aprobadoPor || 'N.Q.'}</span>`;
+    } else if (estado === 'pendiente') {
+      aprobHtml = `<input type="text" placeholder="Iniciales" value="${aprobadoPor}"
+        style="width:80px;padding:3px 6px;border-radius:4px;border:1px solid #333;background:#111;color:#fff;font-size:11px;font-family:'DM Mono',monospace"
+        oninput="estados['${empresa}']['aprobador_${i}']=this.value">`;
+    }
+
+    let accionHtml = '';
+    if (estado === 'pendiente') {
+      accionHtml = `<div class="actions">
+        <button class="btn-ok" onclick="setEstado(${i},'aprobado')">✓ Aprobar</button>
+        <button class="btn-no" onclick="setEstado(${i},'rechazado')">✗</button>
+      </div>`;
+    } else {
+      accionHtml = `<button class="btn-undo" onclick="setEstado(${i},'pendiente')">Deshacer</button>`;
+    }
+
+    const tr = document.createElement('tr');
+    tr.className = rowClass;
+    tr.innerHTML = `
+      <td class="caus">${i + 1}</td>
+      <td class="caus">${r.causacion}</td>
+      <td class="nombre">${r.nombre}</td>
+      <td style="color:#aaa">${r.banco}</td>
+      <td style="color:#aaa;font-family:'DM Mono',monospace;font-size:11px">${r.vencimiento}</td>
+      <td class="val">${fmt(r.valor)}</td>
+      <td>${badgeHtml}</td>
+      <td>${aprobHtml}</td>
+      <td>${accionHtml}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  updateStats(rows, est);
+  renderHist();
+}
+
+function setEstado(i, nuevo) {
+  if (!autenticada) {
+    document.getElementById('lock-overlay').classList.add('show');
+    document.getElementById('lock-input').focus();
+    return;
+  }
+  estados[empresa][i] = nuevo;
+  if (nuevo === 'aprobado') {
+    const aprobador = estados[empresa]['aprobador_' + i] || 'N.Q.';
+    // Guardar en historial
+    const row = datos[empresa][i];
+    const hist = getHist();
+    hist.push({
+      nombre: row.nombre,
+      valor: row.valor,
+      causacion: row.causacion,
+      empresa: empresa === 'eslabon' ? 'Eslabón Dorado' : 'Llanero Barriles',
+      semana: semanas[empresa],
+      aprobadoPor: aprobador,
+      fecha: new Date().toLocaleDateString('es-CO')
+    });
+    saveHist(hist.slice(-300));
+  }
+  render();
+}
+
+function updateStats(rows, est) {
+  const total = rows.reduce((a, r) => a + r.valor, 0);
+  const aprov = Object.entries(est).filter(([k, v]) => !k.includes('aprobador') && v === 'aprobado').length;
+  const pend = rows.filter((_, i) => !est[i] || est[i] === 'pendiente').length;
+  const { dupLista, dupHist } = analizarDups(rows);
+  const alertas = dupLista.size + dupHist.size;
+
+  document.getElementById('stat-total').textContent = rows.length ? fmt(total) : '—';
+  document.getElementById('stat-aprov').textContent = aprov;
+  document.getElementById('stat-pend').textContent = pend;
+  document.getElementById('stat-alert').textContent = alertas;
+  document.getElementById('foot-total').textContent = fmt(total);
+}
+
+function renderHist() {
+  const hist = getHist();
+  const cont = document.getElementById('hist-contenido');
+  if (!hist.length) {
+    cont.innerHTML = '<div class="hist-empty">Sin registros aún. Los pagos aprobados aparecerán aquí automáticamente.</div>';
+    return;
+  }
+  const recientes = [...hist].reverse().slice(0, 40);
+  cont.innerHTML = recientes.map(h => `
+    <div class="hist-item">
+      <div class="hist-nombre">${h.nombre}</div>
+      <div class="hist-empresa">${h.empresa}</div>
+      <div class="hist-semana">${h.semana || h.fecha}</div>
+      <div class="hist-val">${fmt(h.valor)}</div>
+    </div>
+  `).join('');
+}
+
+function aprobarTodos() {
+  if (!autenticada) {
+    document.getElementById('lock-overlay').classList.add('show');
+    document.getElementById('lock-input').focus();
+    return;
+  }
+  const rows = datos[empresa];
+  rows.forEach((_, i) => {
+    if (!estados[empresa][i] || estados[empresa][i] === 'pendiente') {
+      const aprobador = estados[empresa]['aprobador_' + i] || 'N.Q.';
+      estados[empresa][i] = 'aprobado';
+      const hist = getHist();
+      hist.push({
+        nombre: rows[i].nombre, valor: rows[i].valor, causacion: rows[i].causacion,
+        empresa: empresa === 'eslabon' ? 'Eslabón Dorado' : 'Llanero Barriles',
+        semana: semanas[empresa], aprobadoPor: aprobador, fecha: new Date().toLocaleDateString('es-CO')
+      });
+      saveHist(hist.slice(-300));
+    }
+  });
+  render();
+}
+
+function exportar() {
+  const rows = datos[empresa];
+  const est = estados[empresa];
+  const { dupLista, dupHist } = analizarDups(rows);
+  let csv = 'Causación,Nombre,Banco,Vencimiento,Valor,Estado,Aprobado Por,Alerta\n';
+  rows.forEach((r, i) => {
+    const estado = est[i] === 'aprobado' ? 'Aprobado' : est[i] === 'rechazado' ? 'Rechazado' : 'Pendiente';
+    const alerta = dupHist.has(i) ? 'YA PAGADO ANTES' : dupLista.has(i) ? 'DUPLICADO EN LISTA' : '';
+    const aprobador = est['aprobador_' + i] || '';
+    csv += [r.causacion, r.nombre, r.banco, r.vencimiento, r.valor, estado, aprobador, alerta].map(v => `"${v}"`).join(',') + '\n';
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `Pagos_${empresa}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function nuevaSemana() {
+  if (!confirm('¿Iniciar nueva semana? Los pagos actuales quedarán en el historial.')) return;
+  datos[empresa] = [];
+  estados[empresa] = {};
+  semanas[empresa] = '';
+  render();
+}
+
+function switchEmpresa(e) {
+  empresa = e;
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', (i === 0 && e === 'eslabon') || (i === 1 && e === 'llanero'));
+  });
+  render();
+}
+
+// Init
+render();
+renderHist();
+
+
+function verificarClave() {
+  const val = document.getElementById('lock-input').value;
+  if (val === CLAVE) {
+    autenticada = true;
+    document.getElementById('lock-overlay').classList.remove('show');
+    // Add authenticated badge to header
+    const headerLeft = document.querySelector('.header-left p');
+    headerLeft.insertAdjacentHTML('afterend', '<span class="lock-badge" onclick="cerrarSesion()" title="Clic para cerrar sesión">🔓 Nataly · Sesión activa</span>');
+  } else {
+    const err = document.getElementById('lock-error');
+    err.style.display = 'block';
+    document.getElementById('lock-input').value = '';
+    document.getElementById('lock-input').focus();
+    setTimeout(() => err.style.display = 'none', 3000);
+  }
+}
+
+function cerrarSesion() {
+  if (!confirm('¿Cerrar sesión? Los botones de aprobación se bloquearán.')) return;
+  autenticada = false;
+  document.getElementById('lock-overlay').classList.add('show');
+  document.getElementById('lock-input').value = '';
+  const badge = document.querySelector('.lock-badge');
+  if (badge) badge.remove();
+  render();
+}
+
+// ── DEMO ─────────────────────────────────────────────────────────────────────
+function cargarDemo() {
+  // Simular que la semana pasada ya se aprobaron estos pagos
+  const histPasado = [
+    { nombre: 'MOVILGAS LTDA', valor: 203691, causacion: 'CG-530', empresa: 'Eslabón Dorado', semana: '19 may. 2026', aprobadoPor: 'N.Q.', fecha: '19/05/2026' },
+    { nombre: 'COLOMBIA TELECOMUNICACIONES', valor: 200074, causacion: 'CG-521', empresa: 'Eslabón Dorado', semana: '19 may. 2026', aprobadoPor: 'N.Q.', fecha: '19/05/2026' },
+    { nombre: 'LUZ MIRIAM VARGAS AVILA', valor: 400000, causacion: 'DS-140', empresa: 'Eslabón Dorado', semana: '19 may. 2026', aprobadoPor: 'N.Q.', fecha: '19/05/2026' },
+  ];
+  saveHist(histPasado);
+
+  // Esta semana la aux subió estos pagos — 2 de ellos ya fueron aprobados la semana pasada
+  const pagosEstaSemana = [
+    { causacion: 'COMPRA-60', nombre: 'OSCAR FABIAN ARANZA BELTRAN', nit: '1121832999', cuenta: '39500002638', banco: 'BANCOLOMBIA', tipo: 'AHORROS', vencimiento: '25-may', valor: 2758896, notas: 'ANT. 50% saldo' },
+    { causacion: 'CG-521',    nombre: 'COLOMBIA TELECOMUNICACIONES',  nit: '830122566',  cuenta: '',             banco: 'PSE',         tipo: '',        vencimiento: '26-may', valor: 200074,  notas: 'Internet Buque — YA PAGADO SEMANA PASADA' },
+    { causacion: 'CG-528',    nombre: 'LLANOGAS',                      nit: '800021272',  cuenta: '',             banco: 'PSE',         tipo: '',        vencimiento: '2-jun',  valor: 93583,   notas: 'Buque' },
+    { causacion: 'CG-530',    nombre: 'MOVILGAS LTDA',                 nit: '900045328',  cuenta: '36478721867',  banco: 'BANCOLOMBIA', tipo: 'AHORROS', vencimiento: '9-may',  valor: 203691,  notas: 'Total — YA PAGADO SEMANA PASADA' },
+    { causacion: 'CG-531',    nombre: 'MOVILGAS LTDA',                 nit: '900045328',  cuenta: '36478721867',  banco: 'BANCOLOMBIA', tipo: 'AHORROS', vencimiento: '20-may', valor: 220062,  notas: '' },
+    { causacion: 'CG-520',    nombre: 'FUMITEC & SERVIEXTINTORES',     nit: '900758296',  cuenta: '096669998039', banco: 'DAVIVIENDA',  tipo: 'CORRIENTE',vencimiento: '29-may',valor: 35000,   notas: 'Recarga extintor' },
+    { causacion: 'DS-159 Y CG-519', nombre: 'LUZ MIRIAM VARGAS AVILA',nit: '40399298',   cuenta: '3204189765',   banco: 'NEQUI',       tipo: '',        vencimiento: '27-may', valor: 400000,  notas: 'Aseo — YA PAGADO SEMANA PASADA' },
+    { causacion: 'CG-522',    nombre: 'NELSON ANTONIO TRIANA LOPEZ',  nit: '17335801',   cuenta: '39586526407',  banco: 'BANCOLOMBIA', tipo: 'CORRIENTE',vencimiento: '25-may', valor: 70000,   notas: 'Agua Buque' },
+    { causacion: 'ANTICIPO',  nombre: 'MORICHE SUNSET',               nit: '902057650',  cuenta: '91202511193',  banco: 'BANCOLOMBIA', tipo: 'AHORROS', vencimiento: '28-may', valor: 1071000, notas: 'ANT. 50%' },
+    { causacion: 'LIQUIDACION',nombre: 'ERIKA GUTIERRZ',              nit: '1070614785', cuenta: '',             banco: 'NEQUI',       tipo: '',        vencimiento: '21-may', valor: 1488606, notas: '' },
+    { causacion: 'NOMINA 2Q MAY', nombre: 'NÓMINA',                   nit: '',           cuenta: '',             banco: '',            tipo: '',        vencimiento: '29-may', valor: 10144658,notas: '' },
+  ];
+
+  empresa = 'eslabon';
+  datos['eslabon'] = pagosEstaSemana;
+  estados['eslabon'] = {};
+  semanas['eslabon'] = '25 may. – 29 may. 2026';
+
+  // Activar pestaña Eslabón
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+
+  render();
+
+  // Mostrar botón demo oculto
+  const dw = document.getElementById('demo-wrap'); if(dw) dw.style.display='none';
+}
+
+</script>
+
+<!-- Lock overlay -->
+<div class="lock-overlay show" id="lock-overlay">
+  <div class="lock-box">
+    <div style="font-size:36px;margin-bottom:12px">🔐</div>
+    <h2>Inversiones JPQ SAS</h2>
+    <p>Ingresa tu clave para aprobar pagos</p>
+    <input class="lock-input" type="password" id="lock-input" placeholder="••••••••••••••"
+      onkeydown="if(event.key==='Enter') verificarClave()">
+    <button class="lock-btn" onclick="verificarClave()">Ingresar</button>
+    <div class="lock-error" id="lock-error">Clave incorrecta. Inténtalo de nuevo.</div>
+  </div>
+</div>
+
+</body>
+</html>
